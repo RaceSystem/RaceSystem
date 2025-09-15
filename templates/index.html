@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <!-- ✅ 手機響應式設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多視角比賽分析系統</title>
+
+  <!-- ✅ PWA 基礎設定 -->
+  <meta name="theme-color" content="#1976d2">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    :root {
+      --bg:#f6f8fa;
+      --card:#fff;
+      --accent:#1976d2;
+      --muted:#6b7280
+    }
+
+    body {
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;
+      background:var(--bg);
+      color:#111;
+      margin:0;
+      padding:16px
+    }
+
+    .container {
+      max-width:980px;
+      margin:0 auto
+    }
+
+    header {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      text-align:center;
+      justify-content:center
+    }
+
+    h1 {
+      margin:0;
+      font-size:20px
+    }
+
+    .card {
+      background:var(--card);
+      padding:18px;
+      border-radius:12px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.06);
+      margin-top:16px
+    }
+
+    label {
+      display:block;
+      margin:8px 0 6px;
+      font-weight:600
+    }
+
+    input[type=text], input[type=number], input[type=file] {
+      width:100%;
+      padding:10px;
+      border:1px solid #e6e9ee;
+      border-radius:8px;
+      font-size:16px
+    }
+
+    button {
+      background:var(--accent);
+      color:#fff;
+      border:0;
+      padding:12px 16px;
+      border-radius:8px;
+      cursor:pointer;
+      width:100%;
+      font-size:16px
+    }
+
+    .row {
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap
+    }
+
+    .col {
+      flex:1;
+      min-width:220px
+    }
+
+    .small {
+      font-size:13px;
+      color:var(--muted)
+    }
+
+    #resultsArea pre {
+      white-space:pre-wrap
+    }
+
+    .video-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:12px;
+      margin-top:8px
+    }
+
+    video {
+      width:100%;
+      border-radius:8px;
+      background:#000
+    }
+
+    /* 📱 手機螢幕優化 */
+    @media (max-width: 600px) {
+      header img {height:28px}
+      h1{font-size:18px}
+      .row{flex-direction:column}
+      button{font-size:18px;padding:14px}
+      input[type=text], input[type=number], input[type=file]{font-size:18px;padding:12px}
+      .video-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" style="height:36px;opacity:.6">
+      <div>
+        <h1>多視角比賽分析系統</h1>
+        <div class="small">上傳三視角影片 → 自動偵測人臉(比對參賽者) → 標註影片、計算名次 → 同步備份至 :contentReference[oaicite:0]{index=0}</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <h3>新增參賽者</h3>
+      <form id="participantForm" enctype="multipart/form-data">
+        <label>姓名</label>
+        <input type="text" name="name" required>
+        <label>年齡 (選填)</label>
+        <input type="number" name="age">
+        <label>照片 (正面人臉)</label>
+        <input type="file" name="photo" accept="image/*" required>
+        <div style="margin-top:12px">
+          <button type="submit">新增參賽者</button>
+        </div>
+      </form>
+      <div id="participantStatus" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h3>上傳三視角影片並分析</h3>
+      <form id="multiForm" enctype="multipart/form-data">
+        <div class="row">
+          <div class="col">
+            <label>Video 1</label>
+            <input type="file" name="video1" accept="video/*" required>
+          </div>
+          <div class="col">
+            <label>Video 2</label>
+            <input type="file" name="video2" accept="video/*" required>
+          </div>
+          <div class="col">
+            <label>Video 3</label>
+            <input type="file" name="video3" accept="video/*" required>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button type="submit">上傳並分析</button>
+        </div>
+      </form>
+      <div id="multiStatus" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div id="resultsArea" class="card">
+      <h3>分析結果</h3>
+      <div id="resultsList" class="small">尚未有結果</div>
+    </div>
+  </div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js')
+    .then(() => console.log('✅ Service Worker registered'))
+    .catch(err => console.error('⚠️ Service Worker failed:', err));
+}
+
+async function postForm(url, form) {
+  const res = await fetch(url, { method: 'POST', body: form });
+  return res.json();
+}
+
+function renderResult(result) {
+  const area = document.getElementById('resultsList');
+  area.innerHTML = '';
+  if (!result || !result.summary) { area.innerText = '無結果'; return; }
+  result.summary.forEach(item => {
+    const div = document.createElement('div');
+    div.style.marginBottom = '14px';
+    const title = document.createElement('div');
+    title.innerHTML = `<strong>影片：</strong>${item.video} <br><span class="small">標註影片：${item.out_video}</span>`;
+    div.appendChild(title);
+    const vid = document.createElement('video');
+    vid.controls = true;
+    vid.src = '/results/' + item.out_video;
+    div.appendChild(vid);
+    const rbox = document.createElement('div');
+    rbox.style.marginTop = '8px';
+    if (item.rankings && item.rankings.length) {
+      const ol = document.createElement('ol');
+      item.rankings.forEach(p => {
+        const li = document.createElement('li');
+        li.innerText = `${p.participant} — ${p.finish_time}s`;
+        ol.appendChild(li);
+      });
+      rbox.appendChild(ol);
+    } else {
+      rbox.innerText = '未偵測到完成名次。';
+    }
+    div.appendChild(rbox);
+    if (window._lastDrivePaths && window._lastDrivePaths.length) {
+      const dl = document.createElement('div');
+      dl.style.marginTop = '8px';
+      dl.innerHTML = '<strong>備份至 Drive（路徑）</strong><br>' + window._lastDrivePaths.map(p => `<span class="small">${p}</span>`).join('<br>');
+      div.appendChild(dl);
+    }
+    area.appendChild(div);
+  });
+}
+
+function pollStatus(taskId, elem) {
+  fetch('/task_status/' + taskId).then(r => r.json()).then(data => {
+    elem.innerText = '狀態: ' + data.status + (data.message ? '\n訊息: ' + data.message : '');
+    if (data.status === 'done' && data.result) {
+      const res = data.result;
+      if (res.drive_copied) window._lastDrivePaths = res.drive_copied;
+      renderResult(res.summary ? { summary: res.summary } : res);
+    } else if (data.status !== 'done' && data.status !== 'error') {
+      setTimeout(() => pollStatus(taskId, elem), 2000);
+    }
+  });
+}
+
+document.getElementById('participantForm').onsubmit = function (e) {
+  e.preventDefault();
+  const form = new FormData(this);
+  postForm('/add_participant', form).then(data => {
+    document.getElementById('participantStatus').innerText = data.message || data.error || JSON.stringify(data);
+  });
+};
+
+document.getElementById('multiForm').onsubmit = function (e) {
+  e.preventDefault();
+  const form = new FormData(this);
+  postForm('/upload_multi', form).then(data => {
+    if (data && data.task_id) {
+      document.getElementById('multiStatus').innerText = '任務建立，ID: ' + data.task_id;
+      pollStatus(data.task_id, document.getElementById('multiStatus'));
+    } else {
+      document.getElementById('multiStatus').innerText = JSON.stringify(data);
+    }
+  });
+};
+</script>
+<!-- 📲 Add to Home Screen 提示 -->
+<script>
+let deferredPrompt;
+const installBanner = document.createElement('div');
+installBanner.style.cssText = `
+  position:fixed;bottom:20px;left:20px;right:20px;z-index:9999;
+  background:#1976d2;color:#fff;padding:14px;border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.2);display:none;text-align:center
+`;
+installBanner.innerHTML = `
+  <span style="font-size:15px">📱 將本系統安裝到主畫面，快速開啟！</span>
+  <button id="installBtn" style="margin-left:12px;background:#fff;color:#1976d2;
+    border:0;padding:8px 12px;border-radius:6px;font-weight:600;cursor:pointer">
+    安裝
+  </button>
+`;
+document.body.appendChild(installBanner);
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.style.display = 'block';
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('✅ 使用者接受安裝');
+      installBanner.style.display = 'none';
+    }
+    deferredPrompt = null;
+  }
+});
+</script>
+
+</body>
+</html>
