@@ -3,6 +3,9 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from supabase import create_client
 import boto3
+from flask import Flask, send_from_directory
+
+app = Flask(__name__, static_folder="static")
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 logger = logging.getLogger("race")
@@ -74,6 +77,10 @@ app = Flask(__name__, static_folder=STATIC_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024*1024*1024  # 1GB
+
+@app.route("/")
+def home():
+    return send_from_directory("static", "index.html")
 
 @app.route('/add_participant', methods=['POST'])
 def add_participant():
