@@ -1,30 +1,16 @@
-FROM python:3.10-slim
+Flask==2.3.3
+Flask-Cors==6.0.1
 
-WORKDIR /app
+# Supabase 及 GoTrue 最新穩定版本
+supabase>=2.2.1,<3.0
+gotrue>=2.12.4,<3.0
 
-COPY requirements.txt .
+# 視頻處理和圖像處理相關
+opencv-python-headless==4.7.0.72
+numpy==1.26.5
+Pillow==10.1.0
+ffmpeg-python==0.2.0
 
-# 安裝必要套件，libgl1 替代 libgl1-mesa-glx
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        libglib2.0-0 \
-        libsm6 \
-        libxrender1 \
-        libxext6 \
-        ffmpeg \
-        libgl1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# 更新 pip 並安裝 Python 套件
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 複製專案檔案
-COPY . .
-
-# 對外暴露 5000 埠口
-EXPOSE 5000
-
-# 啟動 app
-CMD ["python", "app.py"]
+# 其他依賴
+requests==2.31.0
+python-dotenv==1.0.0
