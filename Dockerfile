@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1
 # 建立專案資料夾
 WORKDIR /app
 
-# 安裝系統依賴（dlib wheel 也可能需要一些庫）
+# 安裝系統依賴（dlib wheel 也可能需要的庫）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -34,6 +34,12 @@ RUN pip install --upgrade pip
 
 # 安裝 Python 套件
 RUN pip install --no-cache-dir -r requirements.txt
+
+# 建立 swap（2GB）
+RUN fallocate -l 2G /swapfile && \
+    chmod 600 /swapfile && \
+    mkswap /swapfile && \
+    swapon /swapfile
 
 # 開放 5000 port
 EXPOSE 5000
