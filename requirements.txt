@@ -1,7 +1,8 @@
 Flask==2.3.3
 Flask-Cors==3.0.10
 opencv-python-headless==4.8.1.78
-face-recognition==1.3.0
+mediapipe==0.10.14
+deepface==0.0.93
 numpy==1.25.2
 Pillow==10.0.1
 supabase==2.2.1
