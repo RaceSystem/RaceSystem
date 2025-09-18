@@ -1,5 +1,5 @@
 Flask==2.3.3
-Flask-Cors==3.0.10
+Flask-Cors>=4.0.1
 opencv-python-headless==4.8.1.78
 mediapipe==0.10.14
 deepface==0.0.93
