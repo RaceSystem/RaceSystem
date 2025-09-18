@@ -1,12 +1,11 @@
-FROM python:3.10-slim
+# 使用 Python 3.12-slim，滿足所有套件要求
+FROM python:3.12-slim
 
+# 設置工作目錄
 WORKDIR /app
 
-COPY requirements.txt .
-
-# 安裝必要套件，libgl1 替代 libgl1-mesa-glx
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# 安裝系統依賴（替換過時的 libgl1-mesa-glx）
+RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libglib2.0-0 \
         libsm6 \
@@ -16,15 +15,16 @@ RUN apt-get update && \
         libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 更新 pip 並安裝 Python 套件
+# 複製 requirements.txt 並安裝 Python 套件
+COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 複製專案檔案
+# 複製專案文件
 COPY . .
 
-# 對外暴露 5000 埠口
+# 開放 5000 端口
 EXPOSE 5000
 
-# 啟動 app
+# 啟動 Flask
 CMD ["python", "app.py"]
