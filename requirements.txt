@@ -7,3 +7,4 @@ numpy==1.25.2
 Pillow==10.0.1
 supabase==2.2.1
 requests==2.31.0
+boto3==1.34.98
