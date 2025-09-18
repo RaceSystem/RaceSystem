@@ -11,6 +11,7 @@ RUN apt-get update && \
         libxrender1 \
         libxext6 \
         ffmpeg \
+        libgl1-mesa-glx \
         && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
