@@ -18,6 +18,9 @@ RUN apt-get update && \
         ffmpeg \
         && rm -rf /var/lib/apt/lists/*
 
+# 升級 pip，避免相依錯誤
+RUN pip install --upgrade pip
+
 # 安裝 Python 套件
 RUN pip install --no-cache-dir -r requirements.txt
 
