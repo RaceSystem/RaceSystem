@@ -1,27 +1,15 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# 安裝最低限度系統套件（避免編譯）
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# 安裝 dlib 預編譯 wheel（避免編譯）
+RUN pip install --no-cache-dir \
+    "dlib==19.24.6" --only-binary :all:
 
-# 升級 pip
-RUN pip install --upgrade pip setuptools wheel
-
+# 安裝其他 Python 套件
 COPY requirements.txt .
-
-# 安裝所有 Python 依賴
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=5000
-
-EXPOSE 5000
-
-CMD ["flask", "run"]
+CMD ["python", "app.py"]
